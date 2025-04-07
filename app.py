@@ -36,31 +36,39 @@ if uploaded_file is not None:
         y2 = y1 + crop_height
         x1, x2 = 0, width
 
+    # Выводим размер обрезанного видео
+    st.write(f"Размер обрезанного видео: {crop_width}x{crop_height}")
+
     # Создаем выходной файл
     output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     output_path = output_file.name
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(output_path, fourcc, fps, (crop_width, crop_height))
 
-    # Читаем и обрабатываем каждый кадр
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        cropped_frame = frame[y1:y2, x1:x2]
-        out.write(cropped_frame)
+    # Проверка на корректность размера
+    if crop_width <= 0 or crop_height <= 0:
+        st.error("Ошибка: некорректный размер выходного видео.")
+    else:
+        out = cv2.VideoWriter(output_path, fourcc, fps, (crop_width, crop_height))
 
-    cap.release()
-    out.release()
+        # Читаем и обрабатываем каждый кадр
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            cropped_frame = frame[y1:y2, x1:x2]
+            out.write(cropped_frame)
 
-    st.write("📼 Обрезка завершена. Сохраняем результат...")
+        cap.release()
+        out.release()
 
-    # Показываем видео
-    st.video(output_path)
+        st.write("📼 Обрезка завершена. Сохраняем результат...")
 
-    # Кнопка для скачивания
-    with open(output_path, "rb") as f:
-        st.download_button("⬇️ Скачать обрезанное видео", data=f, file_name="cropped_video.mp4")
+        # Показываем видео
+        st.video(output_path)
 
-    os.remove(tmp_input_path)
-    os.remove(output_path)
+        # Кнопка для скачивания
+        with open(output_path, "rb") as f:
+            st.download_button("⬇️ Скачать обрезанное видео", data=f, file_name="cropped_video.mp4")
+
+        os.remove(tmp_input_path)
+        os.remove(output_path)
