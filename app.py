@@ -36,39 +36,42 @@ if uploaded_file is not None:
         y2 = y1 + crop_height
         x1, x2 = 0, width
 
-    # Выводим размер обрезанного видео
-    st.write(f"Размер обрезанного видео: {crop_width}x{crop_height}")
-
-    # Создаем выходной файл
-    output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    output_path = output_file.name
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-
-    # Проверка на корректность размера
+    # Проверка значений crop_width и crop_height
     if crop_width <= 0 or crop_height <= 0:
-        st.error("Ошибка: некорректный размер выходного видео.")
+        st.error("Ошибка: Некорректные размеры для обрезки.")
     else:
-        out = cv2.VideoWriter(output_path, fourcc, fps, (crop_width, crop_height))
+        st.write(f"Размер обрезанного видео: {crop_width}x{crop_height}")
 
-        # Читаем и обрабатываем каждый кадр
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            cropped_frame = frame[y1:y2, x1:x2]
-            out.write(cropped_frame)
+        # Создаем выходной файл
+        output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        output_path = output_file.name
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
-        cap.release()
-        out.release()
+        # Проверка на корректность размера
+        if crop_width <= 0 or crop_height <= 0:
+            st.error("Ошибка: некорректный размер выходного видео.")
+        else:
+            out = cv2.VideoWriter(output_path, fourcc, fps, (crop_width, crop_height))
 
-        st.write("📼 Обрезка завершена. Сохраняем результат...")
+            # Читаем и обрабатываем каждый кадр
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                cropped_frame = frame[y1:y2, x1:x2]
+                out.write(cropped_frame)
 
-        # Показываем видео
-        st.video(output_path)
+            cap.release()
+            out.release()
 
-        # Кнопка для скачивания
-        with open(output_path, "rb") as f:
-            st.download_button("⬇️ Скачать обрезанное видео", data=f, file_name="cropped_video.mp4")
+            st.write("📼 Обрезка завершена. Сохраняем результат...")
 
-        os.remove(tmp_input_path)
-        os.remove(output_path)
+            # Показываем видео
+            st.video(output_path)
+
+            # Кнопка для скачивания
+            with open(output_path, "rb") as f:
+                st.download_button("⬇️ Скачать обрезанное видео", data=f, file_name="cropped_video.mp4")
+
+            os.remove(tmp_input_path)
+            os.remove(output_path)
