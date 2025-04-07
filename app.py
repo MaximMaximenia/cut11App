@@ -1,5 +1,5 @@
 import streamlit as st
-from moviepy.editor import VideoFileClip
+import cv2
 import tempfile
 import os
 
@@ -12,30 +12,55 @@ if uploaded_file is not None:
         tmp_input.write(uploaded_file.read())
         tmp_input_path = tmp_input.name
 
-    clip = VideoFileClip(tmp_input_path)
+    # Читаем видео
+    cap = cv2.VideoCapture(tmp_input_path)
+    
+    # Получаем информацию о видео
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
 
-    width, height = clip.size
     st.write(f"Оригинальное разрешение: {width}x{height}")
 
+    # Определяем координаты для обрезки
     if width > height:
         x_center = width // 2
         crop_width = height
         x1 = x_center - crop_width // 2
         x2 = x1 + crop_width
-        cropped = clip.crop(x1=x1, y1=0, x2=x2, y2=height)
+        y1, y2 = 0, height
     else:
         y_center = height // 2
         crop_height = width
         y1 = y_center - crop_height // 2
         y2 = y1 + crop_height
-        cropped = clip.crop(x1=0, y1=y1, x2=width, y2=y2)
+        x1, x2 = 0, width
+
+    # Создаем выходной файл
+    output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    output_path = output_file.name
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (crop_width, crop_height))
+
+    # Читаем и обрабатываем каждый кадр
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        cropped_frame = frame[y1:y2, x1:x2]
+        out.write(cropped_frame)
+
+    cap.release()
+    out.release()
 
     st.write("📼 Обрезка завершена. Сохраняем результат...")
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_output:
-        cropped.write_videofile(tmp_output.name, codec="libx264", audio_codec="aac")
-        st.video(tmp_output.name)
-        with open(tmp_output.name, "rb") as f:
-            st.download_button("⬇️ Скачать обрезанное видео", data=f, file_name="cropped_video.mp4")
+    # Показываем видео
+    st.video(output_path)
+
+    # Кнопка для скачивания
+    with open(output_path, "rb") as f:
+        st.download_button("⬇️ Скачать обрезанное видео", data=f, file_name="cropped_video.mp4")
 
     os.remove(tmp_input_path)
+    os.remove(output_path)
